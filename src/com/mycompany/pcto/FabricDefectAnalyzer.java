@@ -15,7 +15,7 @@ import com.fasterxml.jackson.databind.*;
 public class FabricDefectAnalyzer {
 
     private static final String OLLAMA_URL = "http://localhost:11434/api/generate";
-    private static final String MODEL = "gemma3:4b";
+    private static final String MODEL = "gemma3:2b";
     private static final ObjectMapper mapper = new ObjectMapper();
     private static final HttpClient client = HttpClient.newBuilder()
             .connectTimeout(java.time.Duration.ofSeconds(30))
