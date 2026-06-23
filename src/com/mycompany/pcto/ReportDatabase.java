@@ -27,6 +27,15 @@ public class ReportDatabase {
                         content TEXT NOT NULL
                     )
                 """);
+                stmt.execute("""
+                    CREATE TABLE IF NOT EXISTS cache (
+                        image_path TEXT NOT NULL,
+                        fabric_type TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        cached_at TEXT NOT NULL,
+                        PRIMARY KEY (image_path, fabric_type)
+                    )
+                """);
                 stmt.execute("CREATE INDEX IF NOT EXISTS idx_created_at ON reports(created_at DESC)");
             }
         } catch (Exception e) {
@@ -81,5 +90,33 @@ public class ReportDatabase {
             System.err.println("Errore lettura report: " + e.getMessage());
         }
         return null;
+    }
+
+    public static String getCached(String imagePath, String fabricType) {
+        try (Connection conn = connect();
+             PreparedStatement ps = conn.prepareStatement(
+                 "SELECT content FROM cache WHERE image_path = ? AND fabric_type = ?")) {
+            ps.setString(1, imagePath);
+            ps.setString(2, fabricType);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) return rs.getString("content");
+        } catch (Exception e) {
+            System.err.println("Errore cache: " + e.getMessage());
+        }
+        return null;
+    }
+
+    public static void saveCache(String imagePath, String fabricType, String content) {
+        try (Connection conn = connect();
+             PreparedStatement ps = conn.prepareStatement(
+                 "INSERT OR REPLACE INTO cache (image_path, fabric_type, content, cached_at) VALUES (?, ?, ?, ?)")) {
+            ps.setString(1, imagePath);
+            ps.setString(2, fabricType);
+            ps.setString(3, content);
+            ps.setString(4, LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+            ps.executeUpdate();
+        } catch (Exception e) {
+            System.err.println("Errore salvataggio cache: " + e.getMessage());
+        }
     }
 }

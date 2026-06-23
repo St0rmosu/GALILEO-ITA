@@ -22,8 +22,8 @@ public class FabricDefectAnalyzer {
             .build();
 
     private static final int MAX_IMAGE_SIZE = 10 * 1024 * 1024;
-    private static final int MAX_IMAGE_DIM = 640;
-    private static final int MAX_RESPONSE_TOKENS = 512;
+    private static final int MAX_IMAGE_DIM = 512;
+    private static final int MAX_RESPONSE_TOKENS = 256;
 
     public static String analyzeImageForDefects(String imagePath, String fabricType) throws Exception {
         long start = System.currentTimeMillis();
@@ -83,12 +83,7 @@ public class FabricDefectAnalyzer {
 
     private static String createPrompt(String fabricType, String base64Image) {
         return String.format(
-            "Sei un quality inspector di Galileo Italia SRL. " +
-            "Analizza questa foto di tessuto (%s) e riporta SOLO:\n" +
-            "- Difetti trovati (usura, scolorimenti, macchie, tagli, buchi)\n" +
-            "- Gravita (bassa/media/alta)\n" +
-            "- Posizione approssimativa\n" +
-            "Sii breve e diretto. Nessuna introduzione.\n\n" +
+            "Ispeziona tessuto (%s). Elenca SOLO difetti trovati con gravit\u00e0 e posizione. Massimo 3 righe.\n\n" +
             "data:image/jpeg;base64,%s",
             fabricType, base64Image);
     }

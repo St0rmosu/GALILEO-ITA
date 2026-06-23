@@ -391,6 +391,15 @@ public class GuiInterface {
         @Override
         public void actionPerformed(ActionEvent e) {
             if (selectedImagePath == null) return;
+            String ftype = (String) fabricTypeCombo.getSelectedItem();
+
+            String cached = ReportDatabase.getCached(selectedImagePath, ftype);
+            if (cached != null) {
+                resultArea.setText(cached);
+                statusLabel.setText("Risultato immediato \u2014 gi\u00e0 analizzato in precedenza");
+                statusLabel.setForeground(SUCCESS);
+                return;
+            }
 
             SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {
                 @Override
@@ -400,9 +409,9 @@ public class GuiInterface {
                         progressBar.setVisible(true);
                         statusLabel.setText("Analisi in corso con Gemma 3:4b...");
                         statusLabel.setForeground(WARNING);
-                        resultArea.setText("Analisi in corso...\n\nIl modello AI sta esaminando l'immagine.\nPotrebbero essere necessari alcuni secondi.\n");
+                        resultArea.setText("Prima analisi...\n\nIl modello AI sta esaminando l'immagine.\nAttendi qualche secondo.\n");
                     });
-                    return FabricDefectAnalyzer.analyzeImageForDefects(selectedImagePath, (String) fabricTypeCombo.getSelectedItem());
+                    return FabricDefectAnalyzer.analyzeImageForDefects(selectedImagePath, ftype);
                 }
 
                 @Override
@@ -412,10 +421,10 @@ public class GuiInterface {
                     try {
                         String result = get();
                         resultArea.setText(result);
+                        ReportDatabase.saveCache(selectedImagePath, ftype, result);
                         String fname = new File(selectedImagePath).getName();
-                        String ftype = (String) fabricTypeCombo.getSelectedItem();
                         ReportDatabase.save(fname, ftype, result);
-                        statusLabel.setText("Analisi completata \u2014 report salvato nel database");
+                        statusLabel.setText("Analisi completata \u2014 prossima volta sar\u00e0 immediato");
                         statusLabel.setForeground(SUCCESS);
                     } catch (Exception ex) {
                         resultArea.setText("Errore durante l'analisi\n\n" + ex.getMessage());
