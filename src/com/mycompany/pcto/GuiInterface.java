@@ -282,10 +282,14 @@ public class GuiInterface {
             statusLabel.setText("Pronto");
         });
 
+        JButton historyBtn = new JButton("Cronologia");
+        historyBtn.addActionListener(e -> showHistoryDialog());
+
         JButton saveBtn = new JButton("Salva report");
         saveBtn.addActionListener(new SaveReportListener());
 
         bottomBar.add(clearBtn);
+        bottomBar.add(historyBtn);
         bottomBar.add(saveBtn);
 
         root.add(sectionLabel, BorderLayout.NORTH);
@@ -312,6 +316,56 @@ public class GuiInterface {
         bar.add(statusLabel, BorderLayout.WEST);
 
         return bar;
+    }
+
+    private static void showHistoryDialog() {
+        java.util.List<String[]> reports = ReportDatabase.getAll();
+        if (reports.isEmpty()) {
+            JOptionPane.showMessageDialog(frame, "Nessun report salvato.", "Cronologia", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        String[] cols = {"ID", "Data", "Immagine", "Tessuto"};
+        String[][] rows = new String[reports.size()][4];
+        for (int i = 0; i < reports.size(); i++) rows[i] = reports.get(i);
+
+        JTable table = new JTable(rows, cols);
+        table.setFont(new Font("Inter", Font.PLAIN, 12));
+        table.setRowHeight(28);
+        table.getColumnModel().getColumn(0).setMaxWidth(50);
+        table.getColumnModel().getColumn(1).setPreferredWidth(160);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        int[] res = new int[1];
+        JButton viewBtn = new JButton("Visualizza");
+        viewBtn.addActionListener(ev -> {
+            int r = table.getSelectedRow();
+            if (r >= 0) res[0] = Integer.parseInt(rows[r][0]);
+            Window w = SwingUtilities.getWindowAncestor(table);
+            if (w != null) w.dispose();
+        });
+
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        panel.setBorder(new EmptyBorder(16, 16, 16, 16));
+        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+        JPanel btnP = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        btnP.add(viewBtn);
+        panel.add(btnP, BorderLayout.SOUTH);
+
+        JDialog dialog = new JDialog(frame, "Cronologia Report", true);
+        dialog.add(panel);
+        dialog.setSize(600, 400);
+        dialog.setLocationRelativeTo(frame);
+        dialog.setVisible(true);
+
+        if (res[0] > 0) {
+            String content = ReportDatabase.getById(res[0]);
+            if (content != null) {
+                resultArea.setText(content);
+                statusLabel.setText("Report #" + res[0] + " caricato dal database");
+                statusLabel.setForeground(ACCENT);
+            }
+        }
     }
 
     private static class SelectImageListener implements ActionListener {
@@ -356,8 +410,12 @@ public class GuiInterface {
                     progressBar.setVisible(false);
                     analyzeButton.setEnabled(true);
                     try {
-                        resultArea.setText(get());
-                        statusLabel.setText("Analisi completata con successo");
+                        String result = get();
+                        resultArea.setText(result);
+                        String fname = new File(selectedImagePath).getName();
+                        String ftype = (String) fabricTypeCombo.getSelectedItem();
+                        ReportDatabase.save(fname, ftype, result);
+                        statusLabel.setText("Analisi completata \u2014 report salvato nel database");
                         statusLabel.setForeground(SUCCESS);
                     } catch (Exception ex) {
                         resultArea.setText("Errore durante l'analisi\n\n" + ex.getMessage());

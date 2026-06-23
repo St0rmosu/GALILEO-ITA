@@ -10,5 +10,6 @@
     <orderEntry type="library" name="lib" level="project" />
     <orderEntry type="library" name="lib2" level="project" />
     <orderEntry type="library" name="flatlaf" level="project" />
+    <orderEntry type="library" name="sqlite" level="project" />
   </component>
 </module>

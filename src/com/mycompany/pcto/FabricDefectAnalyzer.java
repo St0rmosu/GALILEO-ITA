@@ -1,152 +1,142 @@
 package com.mycompany.pcto;
 
+import javax.imageio.ImageIO;
+import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URI;
 import java.net.http.*;
 import java.util.*;
-import javax.imageio.ImageIO;
 import java.util.Base64;
+
 import com.fasterxml.jackson.databind.*;
 
-/**
- * Classe core per l'analisi dei difetti nei tessuti
- * Progetto PCTO - NetBeans/Ant
- * 
- * @author PCTO Team
- * @version 2.0
- */
 public class FabricDefectAnalyzer {
-    
-    // Configurazione Ollama
-    private static final String OLLAMA_URL = "http://localhost:11434/api/generate";
-    private static final String MODEL_GEMMA = "gemma3:4b";
-    private static final ObjectMapper mapper = new ObjectMapper();
 
-    private static final String[] SUPPORTED_FORMATS = {"jpg", "jpeg", "png", "bmp", "gif"};
+    private static final String OLLAMA_URL = "http://localhost:11434/api/generate";
+    private static final String MODEL = "gemma3:4b";
+    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final HttpClient client = HttpClient.newBuilder()
+            .connectTimeout(java.time.Duration.ofSeconds(30))
+            .build();
+
     private static final int MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+    private static final int MAX_IMAGE_DIM = 640;
+    private static final int MAX_RESPONSE_TOKENS = 512;
 
     public static String analyzeImageForDefects(String imagePath, String fabricType) throws Exception {
-        System.out.println("🔍 Caricamento immagine: " + imagePath);
-//        BufferedImage image = loadAndValidateImage(imagePath);
-//        System.out.println("🔄 Conversione immagine in formato base64...");
-//        String base64Image = imageToBase64(image);
+        long start = System.currentTimeMillis();
 
-        String prompt = createFabricAnalysisPrompt(fabricType, imagePath);
+        BufferedImage image = loadAndValidateImage(imagePath);
+        image = resizeIfNeeded(image);
+        String base64Image = imageToBase64(image);
+        String prompt = createPrompt(fabricType, base64Image);
 
-        System.out.println("🚀 Invio richiesta a Gemma3:4b");
-        long gemmaStart = System.currentTimeMillis();
-        String gemmaResult = sendRequestToModel(MODEL_GEMMA, prompt);
-        long gemmaEnd = System.currentTimeMillis();
-        System.out.printf("✅ Gemma3:4b completato in %.2f secondi%n", (gemmaEnd - gemmaStart) / 1000.0);
+        System.out.println("Invio richiesta a " + MODEL + "...");
+        String result = sendRequestToModel(prompt);
+        result = result.trim();
 
-        return gemmaResult.trim();
+        long elapsed = System.currentTimeMillis() - start;
+        System.out.printf("Analisi completata in %.1f secondi%n", elapsed / 1000.0);
+
+        return result;
     }
 
-    private static BufferedImage loadAndValidateImage(String imagePath) throws IOException {
-        imagePath = cleanPath(imagePath);
-        File imageFile = new File(imagePath);
+    private static BufferedImage loadAndValidateImage(String path) throws IOException {
+        path = cleanPath(path);
+        File f = new File(path);
+        if (!f.exists()) throw new FileNotFoundException("Immagine non trovata: " + path);
+        if (f.length() > MAX_IMAGE_SIZE) throw new IOException("Immagine troppo grande (max 10MB).");
 
-        if (!imageFile.exists()) {
-            throw new FileNotFoundException("❌ Immagine non trovata: " + imagePath);
-        }
-        if (imageFile.length() > MAX_IMAGE_SIZE) {
-            throw new IOException("❌ Immagine troppo grande. Massimo 10MB consentiti.");
-        }
-        String extension = getFileExtension(imagePath).toLowerCase();
-        if (!Arrays.asList(SUPPORTED_FORMATS).contains(extension)) {
-            throw new IOException("❌ Formato non supportato. Usa: " + Arrays.toString(SUPPORTED_FORMATS));
-        }
-        BufferedImage image = ImageIO.read(imageFile);
-        if (image == null) {
-            throw new IOException("❌ Impossibile leggere l'immagine. File corrotto?");
-        }
-        System.out.printf("✅ Immagine caricata: %dx%d pixel, formato: %s%n", 
-                image.getWidth(), image.getHeight(), extension.toUpperCase());
-        return image;
+        String ext = getExtension(path).toLowerCase();
+        if (!ext.matches("jpg|jpeg|png|bmp|gif"))
+            throw new IOException("Formato non supportato: " + ext);
+
+        BufferedImage img = ImageIO.read(f);
+        if (img == null) throw new IOException("Impossibile leggere l'immagine.");
+        return img;
     }
 
-    private static String createFabricAnalysisPrompt(String fabricType, String base64Image) {
+    private static BufferedImage resizeIfNeeded(BufferedImage img) {
+        int w = img.getWidth(), h = img.getHeight();
+        if (w <= MAX_IMAGE_DIM && h <= MAX_IMAGE_DIM) return img;
+
+        double scale = Math.min((double) MAX_IMAGE_DIM / w, (double) MAX_IMAGE_DIM / h);
+        int nw = (int) (w * scale), nh = (int) (h * scale);
+
+        Image tmp = img.getScaledInstance(nw, nh, Image.SCALE_SMOOTH);
+        BufferedImage out = new BufferedImage(nw, nh, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = out.createGraphics();
+        g.drawImage(tmp, 0, 0, null);
+        g.dispose();
+
+        System.out.printf("Immagine ridotta: %dx%d -> %dx%d%n", w, h, nw, nh);
+        return out;
+    }
+
+    private static String imageToBase64(BufferedImage img) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(512 * 1024);
+        ImageIO.write(img, "jpg", baos);
+        return Base64.getEncoder().encodeToString(baos.toByteArray());
+    }
+
+    private static String createPrompt(String fabricType, String base64Image) {
         return String.format(
-            "Sei un esperto quality inspector che fa parte dell'azienda Galileo Italia SRL specializzato nell'analisi di tessuti. " +
-            "CERCA SPECIFICAMENTE tutti i difetti del tipo usurazione, scolorimenti, macchie, tagli,  \n" +  
-            "RISPONDI IN ITALIANO con un report dettagliato e professionale.\n\n" +
-            "Immagine da analizzare: data:image/jpeg;base64,%s", 
-            base64Image
-        );
+            "Sei un quality inspector di Galileo Italia SRL. " +
+            "Analizza questa foto di tessuto (%s) e riporta SOLO:\n" +
+            "- Difetti trovati (usura, scolorimenti, macchie, tagli, buchi)\n" +
+            "- Gravita (bassa/media/alta)\n" +
+            "- Posizione approssimativa\n" +
+            "Sii breve e diretto. Nessuna introduzione.\n\n" +
+            "data:image/jpeg;base64,%s",
+            fabricType, base64Image);
     }
 
-//    private static String createFabricAnalysisPrompt(String fabricType, String base64Image) {
-//        return String.format(
-//            "che cosa rappresenta questa immagine?" +
-//            "RISPONDI IN ITALIANO con un report dettagliato e professionale.\n\n" +
-//            "Immagine da analizzare: data:image/jpeg;base64,%s", 
-//            base64Image
-//        );
-//    }
-    
-    private static String sendRequestToModel(String model, String prompt) throws Exception {
-        Map<String, Object> request = new HashMap<>();
-        request.put("model", model);
-        request.put("prompt", prompt);
-        request.put("stream", false);
-        request.put("options", createMistralOptions());
+    private static String sendRequestToModel(String prompt) throws Exception {
+        Map<String, Object> options = new HashMap<>();
+        options.put("temperature", 0.05);
+        options.put("num_predict", MAX_RESPONSE_TOKENS);
+        options.put("num_ctx", 2048);
+        options.put("top_k", 20);
+        options.put("top_p", 0.7);
+        options.put("repeat_penalty", 1.1);
 
-        String jsonRequest = mapper.writeValueAsString(request);
-        HttpClient client = HttpClient.newBuilder()
-                .connectTimeout(java.time.Duration.ofSeconds(30))
-                .build();
+        Map<String, Object> body = new HashMap<>();
+        body.put("model", MODEL);
+        body.put("prompt", prompt);
+        body.put("stream", false);
+        body.put("keep_alive", "5m");
+        body.put("options", options);
 
-        HttpRequest httpRequest = HttpRequest.newBuilder()
+        String json = mapper.writeValueAsString(body);
+
+        HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(OLLAMA_URL))
                 .header("Content-Type", "application/json")
-                .timeout(java.time.Duration.ofMinutes(5))
-                .POST(HttpRequest.BodyPublishers.ofString(jsonRequest))
+                .timeout(java.time.Duration.ofMinutes(3))
+                .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
 
-        HttpResponse<String> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString());
 
-        if (response.statusCode() != 200) {
-            throw new RuntimeException("Errore HTTP " + response.statusCode() + ": " + response.body());
-        }
-        return parseOllamaResponse(response.body());
+        if (resp.statusCode() != 200)
+            throw new RuntimeException("HTTP " + resp.statusCode() + ": " + resp.body());
+
+        JsonNode root = mapper.readTree(resp.body());
+        if (root.has("response")) return root.get("response").asText();
+        if (root.has("error")) throw new RuntimeException("Ollama: " + root.get("error").asText());
+        throw new RuntimeException("Risposta inattesa da Ollama");
     }
 
-    private static Map<String, Object> createMistralOptions() {
-        Map<String, Object> options = new HashMap<>();
-        options.put("temperature", 0.1);
-        options.put("top_p", 0.8);
-        options.put("top_k", 40);
-        return options;
+    private static String cleanPath(String p) {
+        p = p.trim();
+        if (p.startsWith("\"") && p.endsWith("\"")) p = p.substring(1, p.length() - 1);
+        return p;
     }
 
-    private static String parseOllamaResponse(String jsonResponse) throws Exception {
-        JsonNode root = mapper.readTree(jsonResponse);
-        if (root.has("response")) {
-            return root.get("response").asText();
-        } else if (root.has("error")) {
-            throw new RuntimeException("❌ Errore da Ollama: " + root.get("error").asText());
-        } else {
-            throw new RuntimeException("❌ Risposta inattesa da Ollama: " + jsonResponse);
-        }
-    }
-
-//    private static String imageToBase64(BufferedImage image) throws IOException {
-//        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-//        ImageIO.write(image, "jpg", baos);
-//        byte[] imageBytes = baos.toByteArray();
-//        return Base64.getEncoder().encodeToString(imageBytes);
-//    }
-
-    private static String cleanPath(String path) {
-        if (path.startsWith("\"") && path.endsWith("\"")) {
-            return path.substring(1, path.length() - 1);
-        }
-        return path.trim();
-    }
-
-    private static String getFileExtension(String filename) {
-        int lastDot = filename.lastIndexOf('.');
-        return (lastDot > 0) ? filename.substring(lastDot + 1) : "";
+    private static String getExtension(String f) {
+        int i = f.lastIndexOf('.');
+        return i > 0 ? f.substring(i + 1) : "";
     }
 }
