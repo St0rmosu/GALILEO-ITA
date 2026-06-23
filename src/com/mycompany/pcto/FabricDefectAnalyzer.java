@@ -15,7 +15,7 @@ import com.fasterxml.jackson.databind.*;
 public class FabricDefectAnalyzer {
 
     private static final String OLLAMA_URL = "http://localhost:11434/api/generate";
-    private static final String MODEL = "gemma3:1b";
+    private static final String MODEL = "qwen2.5-vl:3b";
     private static final ObjectMapper mapper = new ObjectMapper();
     private static final HttpClient client = HttpClient.newBuilder()
             .connectTimeout(java.time.Duration.ofSeconds(30))
@@ -23,7 +23,7 @@ public class FabricDefectAnalyzer {
 
     private static final int MAX_IMAGE_SIZE = 10 * 1024 * 1024;
     private static final int MAX_IMAGE_DIM = 512;
-    private static final int MAX_RESPONSE_TOKENS = 256;
+    private static final int MAX_RESPONSE_TOKENS = 512;
 
     public static String analyzeImageForDefects(String imagePath, String fabricType) throws Exception {
         long start = System.currentTimeMillis();

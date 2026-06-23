@@ -111,7 +111,7 @@ public class GuiInterface {
 
         left.add(Box.createVerticalStrut(3));
 
-        JLabel subtitle = new JLabel("Powered by Gemma 3 \u00b7 AI Quality Inspection");
+        JLabel subtitle = new JLabel("Powered by Qwen 2.5 VL \u00b7 AI Quality Inspection");
         subtitle.setFont(new Font("Inter", Font.PLAIN, 13));
         subtitle.setForeground(UIManager.getColor("Label.disabledForeground"));
         subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
