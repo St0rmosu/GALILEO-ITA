@@ -14,8 +14,8 @@ import com.fasterxml.jackson.databind.*;
 
 public class FabricDefectAnalyzer {
 
-    private static final String OLLAMA_URL = "http://localhost:11434/api/generate";
-    private static final String MODEL = "qwen2.5vl:3b";
+    private static final String OLLAMA_URL = "http://localhost:11434/api/chat";
+    private static final String MODEL = "gemma3:1b";
     private static final ObjectMapper mapper = new ObjectMapper();
     private static final HttpClient client = HttpClient.newBuilder()
             .connectTimeout(java.time.Duration.ofSeconds(30))
@@ -23,7 +23,7 @@ public class FabricDefectAnalyzer {
 
     private static final int MAX_IMAGE_SIZE = 10 * 1024 * 1024;
     private static final int MAX_IMAGE_DIM = 512;
-    private static final int MAX_RESPONSE_TOKENS = 512;
+    private static final int MAX_RESPONSE_TOKENS = 1024;
 
     public static String analyzeImageForDefects(String imagePath, String fabricType) throws Exception {
         long start = System.currentTimeMillis();
@@ -31,10 +31,10 @@ public class FabricDefectAnalyzer {
         BufferedImage image = loadAndValidateImage(imagePath);
         image = resizeIfNeeded(image);
         String base64Image = imageToBase64(image);
-        String prompt = createPrompt(fabricType, base64Image);
+        String prompt = createPrompt(fabricType);
 
         System.out.println("Invio richiesta a " + MODEL + "...");
-        String result = sendRequestToModel(prompt);
+        String result = sendRequestToModel(prompt, base64Image);
         result = result.trim();
 
         long elapsed = System.currentTimeMillis() - start;
@@ -81,14 +81,21 @@ public class FabricDefectAnalyzer {
         return Base64.getEncoder().encodeToString(baos.toByteArray());
     }
 
-    private static String createPrompt(String fabricType, String base64Image) {
+    private static String createPrompt(String fabricType) {
         return String.format(
-            "Ispeziona tessuto (%s). Elenca SOLO difetti trovati con gravit\u00e0 e posizione. Massimo 3 righe.\n\n" +
-            "data:image/jpeg;base64,%s",
-            fabricType, base64Image);
+            "Sei un esperto di controllo qualit\u00e0 tessile. " +
+            "Ispeziona il tessuto (%s) nell'immagine. " +
+            "Elenca tutti i difetti visibili, uno per riga. " +
+            "Per ogni difetto indica:\n" +
+            "- Nome del difetto (in italiano tecnico tessile)\n" +
+            "- Posizione precisa nel tessuto\n" +
+            "- Gravità (lieve/moderata/grave)\n" +
+            "- Breve descrizione\n" +
+            "Se non ci sono difetti, scrivi \"Nessun difetto rilevato\".",
+            fabricType);
     }
 
-    private static String sendRequestToModel(String prompt) throws Exception {
+    private static String sendRequestToModel(String prompt, String base64Image) throws Exception {
         Map<String, Object> options = new HashMap<>();
         options.put("temperature", 0.05);
         options.put("num_predict", MAX_RESPONSE_TOKENS);
@@ -97,9 +104,14 @@ public class FabricDefectAnalyzer {
         options.put("top_p", 0.7);
         options.put("repeat_penalty", 1.1);
 
-        Map<String, Object> body = new HashMap<>();
+        Map<String, Object> userMsg = new LinkedHashMap<>();
+        userMsg.put("role", "user");
+        userMsg.put("content", prompt);
+        userMsg.put("images", Collections.singletonList(base64Image));
+
+        Map<String, Object> body = new LinkedHashMap<>();
         body.put("model", MODEL);
-        body.put("prompt", prompt);
+        body.put("messages", Collections.singletonList(userMsg));
         body.put("stream", false);
         body.put("keep_alive", "5m");
         body.put("options", options);
@@ -119,7 +131,8 @@ public class FabricDefectAnalyzer {
             throw new RuntimeException("HTTP " + resp.statusCode() + ": " + resp.body());
 
         JsonNode root = mapper.readTree(resp.body());
-        if (root.has("response")) return root.get("response").asText();
+        if (root.has("message") && root.get("message").has("content"))
+            return root.get("message").get("content").asText();
         if (root.has("error")) throw new RuntimeException("Ollama: " + root.get("error").asText());
         throw new RuntimeException("Risposta inattesa da Ollama");
     }
