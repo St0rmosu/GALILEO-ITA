@@ -146,13 +146,6 @@ Il programma è client di un servizio esterno, l'API nativa di Ollama:
 
 > Nota sui modelli: il codice attuale usa `gemma3:1b`, mentre README/CLI citano `gemma3:4b` e la GUI mostra "Powered by Qwen 2.5 VL". La storia del repo mostra una migrazione reale tra modelli; adeguare il nome nel codice e nell'UI alla versione effettivamente usata.
 
-## Testing
-
-- Test manuali della GUI (flusso completo: analisi, cache, cronologia, salvataggio).
-- Test della CLI con immagini di diverse dimensioni/formati.
-- Verifica dei controlli di validazione (estensione non supportata, file > 10 MB).
-- Target Ant disponibili: `clean`, `compile`, `test`, `run`, `jar`.
-
 ## Limitations & Future Improvements
 
 - Il nome del modello è incoerente tra codice, CLI e GUI (vedi nota sopra).
