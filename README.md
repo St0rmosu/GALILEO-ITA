@@ -18,15 +18,13 @@ Software desktop in Java sviluppato durante il percorso **PCTO** presso **Galile
 
 ## Tech Stack
 
-| Tecnologia | Ruolo |
-|---|---|
-| Java 11+ | Linguaggio e runtime |
-| Swing + FlatLaf | Interfaccia grafica con tema dark |
-| `java.net.http.HttpClient` | Comunicazione HTTP con il server Ollama |
-| Ollama + Gemma 3 | Modello vision-language per l'analisi |
-| Jackson 2.15 | Parsing/serializzazione JSON |
-| SQLite JDBC | Persistenza locale (cronologia e cache) |
-| NetBeans / Ant | IDE e build system |
+- **Java 11+** — Linguaggio principale e runtime applicativo
+- **Swing & FlatLaf** — Interfaccia grafica desktop moderna con tema scuro
+- **Ollama & Gemma 3** — Vision-language model locale per l'analisi intelligente dei difetti
+- **java.net.http.HttpClient** — Comunicazione asincrona con l'API del server Ollama
+- **Jackson 2.15** — Parsing e serializzazione JSON per report diagnostici
+- **SQLite JDBC** — Database locale per persistenza, cronologia e cache
+- **Apache Ant & NetBeans** — Ambiente di sviluppo e build system per packaging JAR
 
 ## Architettura
 
