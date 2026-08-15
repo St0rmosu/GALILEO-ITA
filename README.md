@@ -117,22 +117,20 @@ java -jar PCTO1.jar
 
 ## Screenshots / Demo
 
-![GALILEO-ITA](https://raw.githubusercontent.com/St0rmosu/GALILEO-ITA/main/dist/PCTO1.jar)
-
-> Inserire qui uno screenshot della GUI (es. `docs/screenshot.png`). La GUI usa FlatLaf dark e mostra una card di controllo, una barra di avanzamento indeterminata e una card di report in sola lettura.
+L'interfaccia grafica desktop è realizzata in Java Swing con **FlatLaf Dark Theme**, integrando controlli di upload immagine, selettore tipologia tessuto, progress bar indeterminata durante l'inferenza AI e pannello di visualizzazione diagnostica.
 
 ## API Documentation
 
-Il programma è client di un servizio esterno, l'API nativa di Ollama:
+Il programma comunica in locale con l'API nativa di Ollama:
 
-| Endpoint | Metodo | Body (sintesi) |
+| Endpoint | Metodo | Payload Body |
 |---|---|---|
-| `http://localhost:11434/api/chat` | POST | `{ model, messages[{role, content, images}], stream: false, keep_alive: "5m", options }` |
+| `http://localhost:11434/api/chat` | `POST` | `{"model": "gemma3:4b", "messages": [{"role": "user", "content": "...", "images": ["<base64>"]}], "stream": false, "options": {"temperature": 0.05}}` |
 
-- `model`: `gemma3:1b` (attualmente nel codice), `gemma3:4b` o `qwen2.5vl:3b`.
-- `messages[0].images`: array con la foto codificata in base64 (max 512 px).
+- `model`: `gemma3:1b` / `gemma3:4b` / `qwen2.5vl:3b`.
+- `messages[0].images`: array con la foto codificata in JPEG base64 (downscale a 512 px).
 - `options`: `temperature: 0.05`, `num_predict: 1024`, `num_ctx: 2048`, `top_k: 20`, `top_p: 0.7`, `repeat_penalty: 1.1`.
-- Risposta: campo `message.content` con il report testuale; il programma lancia un errore su campo `error` o status HTTP != 200.
+- Risposta: campo `message.content` contenente il report diagnostico strutturato.
 
 ## Engineering Decisions
 
