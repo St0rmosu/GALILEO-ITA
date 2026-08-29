@@ -32,17 +32,17 @@ L'applicazione è organizzata in un unico package (`com.mycompany.pcto`) con sep
 
 ```mermaid
 flowchart TD
-    A[MainLauncher<br/>(scelta GUI / Console)] --> B[GuiInterface<br/>Swing/FlatLaf]
-    A --> C[ConsoleInterface<br/>CLI loop]
+    A["MainLauncher (scelta GUI / Console)"] --> B["GuiInterface (Swing/FlatLaf)"]
+    A --> C["ConsoleInterface (CLI loop)"]
     B --> D
     C --> D
     subgraph FabricDefectAnalyzer
         D[FabricDefectAnalyzer]
     end
-    D -->|POST http://localhost:11434/api/chat| E[Ollama: Gemma 3]
+    D -->|POST a Ollama| E["Ollama: Gemma 3"]
     E -->|JSON response| D
-    D --> F[ReportDatabase<br/>SQLite]
-    D --> G[~/.galileo/<br/>reports.db]
+    D --> F["ReportDatabase (SQLite)"]
+    D --> G["~/.galileo/reports.db"]
 ```
 
 Flusso di lavoro: l'utente sceglie un'immagine e un tipo di tessuto, il sistema controlla la cache in SQLite, se assente `FabricDefectAnalyzer` prepara l'immagine, costruisce il prompt e chiama Ollama; il report viene mostrato, salvato nella cronologia e cachato.
