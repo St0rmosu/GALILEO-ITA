@@ -30,20 +30,7 @@ Software desktop in Java sviluppato durante il percorso PCTO presso Galileo Ital
 
 L'applicazione è organizzata in un unico package (`com.mycompany.pcto`) con separazione tra interfaccia, logica AI e persistenza:
 
-```mermaid
-flowchart TD
-    A["MainLauncher (scelta GUI / Console)"] --> B["GuiInterface (Swing/FlatLaf)"]
-    A --> C["ConsoleInterface (CLI loop)"]
-    B --> D
-    C --> D
-    subgraph FabricDefectAnalyzer
-        D[FabricDefectAnalyzer]
-    end
-    D -->|POST a Ollama| E["Ollama: Gemma 3"]
-    E -->|JSON response| D
-    D --> F["ReportDatabase (SQLite)"]
-    D --> G["~/.galileo/reports.db"]
-```
+![Diagramma architettura](docs/architecture.png)
 
 Flusso di lavoro: l'utente sceglie un'immagine e un tipo di tessuto, il sistema controlla la cache in SQLite, se assente `FabricDefectAnalyzer` prepara l'immagine, costruisce il prompt e chiama Ollama; il report viene mostrato, salvato nella cronologia e cachato.
 
