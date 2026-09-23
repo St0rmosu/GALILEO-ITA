@@ -18,7 +18,7 @@ Software desktop in Java sviluppato durante il percorso PCTO presso Galileo Ital
 
 ## Tecnologie
 
-- **Java 11+** — linguaggio principale e runtime applicativo
+- **Java 11+** — API usate; build e runtime verificati con JDK 24
 - **Swing & FlatLaf** — interfaccia grafica desktop con tema scuro
 - **Ollama & Gemma 3** — vision-language model locale per l'analisi dei difetti
 - **java.net.http.HttpClient** — comunicazione asincrona con l'API del server Ollama
@@ -55,11 +55,11 @@ ant clean compile run        # via Ant
 # oppure apri il progetto in NetBeans e premi Run
 ```
 
-In alternativa, esegui il jar distribuito:
+In alternativa, esegui il jar compilato (richiede la build già eseguita):
 
 ```bash
-cd dist
-java -jar PCTO1.jar
+ant clean compile
+java -cp "dist/PCTO1.jar:lib/*" com.mycompany.pcto.MainLauncher
 ```
 
 > Nota: `dist/lib/` contiene solo i jar Jackson. FlatLaf e SQLite JDBC non sono copiati nella distribuzione, quindi il jar richiede librerie aggiuntive per girare.
@@ -78,7 +78,7 @@ Il programma comunica in locale con l'API nativa di Ollama:
 
 | Endpoint | Metodo | Payload Body |
 |---|---|---|
-| `http://localhost:11434/api/chat` | `POST` | `{"model": "gemma3:4b", "messages": [{"role": "user", "content": "...", "images": ["<base64>"]}], "stream": false, "options": {"temperature": 0.05}}` |
+| `http://localhost:11434/api/chat` | `POST` | `{"model": "gemma3:1b", "messages": [{"role": "user", "content": "...", "images": ["<base64>"]}], "stream": false, "options": {"temperature": 0.05}}` |
 
 - `model`: `gemma3:1b` / `gemma3:4b` / `qwen2.5vl:3b`.
 - `messages[0].images`: array con la foto codificata in JPEG base64 (downscale a 512 px).
@@ -103,5 +103,13 @@ GALILEO-ITA/
 ├── dist/                        # Distribuzione (PCTO1.jar + lib/)
 └── manifest.mf
 ```
+
+## Limitazioni e sviluppi futuri
+
+- `build/built-jar.properties` contiene un percorso assoluto residuo della macchina di sviluppo.
+- Il report del modello non è strutturato (testo libero); un output JSON con difetti tipizzati migliorerebbe il downstream.
+- Prossimi passi: parsing strutturato del report, supporto batch di più immagini, integrazione OCR per etichette, packaging con `jlink`/`jpackage` per un installer nativo.
+
+---
 
 *Sviluppato da Lorenzo Recchia & Team PCTO @ IISS Luigi Dell'Erba*
